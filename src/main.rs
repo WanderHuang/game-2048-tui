@@ -1,26 +1,24 @@
 mod app;
-mod canvas_box;
 mod event;
 mod game;
 
-use std::{error::Error, io, ops::Add, time::Duration};
+use std::{error::Error, fmt::Debug, io, time::Duration};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    text::Span,
+    style::{Color},
     widgets::{
-        canvas::{Canvas, Line, Map, MapResolution, Points, Rectangle},
+        canvas::{Canvas, Line, Points},
         Block, Borders,
     },
     Terminal,
 };
 
 use app::App;
-use canvas_box::render_box;
 use event::{Config, Event, Events};
 use game::Command;
+use std::time::{SystemTime};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout().into_raw_mode()?;
@@ -38,7 +36,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::new();
 
     loop {
-        
         terminal.draw(|f| {
             let chunks = Layout::default()
                 .direction(Direction::Horizontal)
@@ -57,8 +54,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     for (row, list) in grid.iter().enumerate() {
                         for (col, _) in list.iter().enumerate() {
                             // 盒子参数
-                            let s =
-                                pad_str(grid[row][col].to_owned().to_string(), 6).into_boxed_str();
+                            let score = grid[row][col];
+                            let s = pad_str(score.to_owned().to_string(), 6).into_boxed_str();
                             let x_box = (col as f64) * app.box_size;
                             let y_box = (row as f64) * app.box_size;
                             ctx.print(
@@ -67,41 +64,59 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     - half_box_size
                                     - font_width * 2.0,
                                 Box::leak(s),
-                                Color::Yellow,
+                                score_to_color(score),
                             );
-                            ctx.draw(&Points {
-                                coords: &render_box(x_box, y_box, app.box_size, app.box_size),
-                                color: Color::Green,
-                            });
                             ctx.draw(&Line {
                                 x1: x_box,
                                 y1: y_box,
                                 x2: x_box + app.box_size,
                                 y2: y_box,
-                                color: Color::Black,
+                                color: Color::Green,
                             });
                             ctx.draw(&Line {
                                 x1: x_box,
                                 y1: y_box,
                                 x2: x_box,
                                 y2: y_box + app.box_size,
-                                color: Color::Black,
+                                color: Color::Green,
                             });
                             ctx.draw(&Line {
                                 x1: x_box + app.box_size,
                                 y1: y_box,
                                 x2: x_box + app.box_size,
                                 y2: y_box + app.box_size,
-                                color: Color::Black,
+                                color: Color::Green,
                             });
                             ctx.draw(&Line {
                                 x1: x_box,
                                 y1: y_box + app.box_size,
                                 x2: x_box + app.box_size,
                                 y2: y_box + app.box_size,
-                                color: Color::Black,
+                                color: Color::Green,
                             });
                         }
+                    }
+
+                    if !app.is_alive() {
+
+                        ctx.draw(&Points {
+                            coords: &app.get_game_over_modal(),
+                            color: Color::Green
+                        });
+
+                        ctx.print(
+                            app.box_size * 1.5,
+                            app.box_size * 2.0,
+                            "---- GAME OVER! ----",
+                            Color::Blue,
+                        );
+
+                        ctx.print(
+                            app.box_size * 1.3,
+                            app.box_size * 1.8,
+                            ">>>> Restart[R] Quit[Q] <<<<",
+                            Color::Blue,
+                        );
                     }
                 })
                 .x_bounds([0.0, board_size])
@@ -111,6 +126,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             let canvas = Canvas::default()
                 .block(Block::default().borders(Borders::ALL).title("Panel"))
                 .paint(|ctx| {
+                    ctx.print(board_size, board_size, "Relax in 2048", Color::Blue);
+
                     let score = app.get_score().to_owned().to_string().into_boxed_str();
                     ctx.print(board_size, board_size - 5.0, "Score:", Color::Yellow);
                     ctx.print(
@@ -119,6 +136,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                         Box::leak(score),
                         Color::Yellow,
                     );
+
+                    ctx.print(board_size, 0.0, "Quit[Q]", Color::Blue);
                 })
                 .x_bounds([board_size, panel_size])
                 .y_bounds([0.0, board_size]);
@@ -129,6 +148,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Key::Char('q') => {
                     break;
                 }
+                Key::Char('r') => {
+                    app.restart();
+                }
+                // left up right down
                 Key::Down => {
                     app.add_command(Command::Down);
                 }
@@ -141,12 +164,24 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Key::Left => {
                     app.add_command(Command::Left);
                 }
+                // h k l j   vim keys support
+                Key::Char('h') => {
+                    app.add_command(Command::Left);
+                }
+                Key::Char('k') => {
+                    app.add_command(Command::Up);
+                }
+                Key::Char('l') => {
+                    app.add_command(Command::Right);
+                }
+                Key::Char('j') => {
+                    app.add_command(Command::Down);
+                }
                 _ => {
                     app.add_command(Command::Nil);
                 }
             },
             Event::Tick => {
-                // 一个时钟只取一个命令
                 app.next()
             }
         }
@@ -166,4 +201,16 @@ fn pad_str(s: String, length: usize) -> String {
     }
 
     s
+}
+
+fn score_to_color(score: i32) -> Color {
+    if score < 64 {
+        Color::Yellow
+    } else if score < 1024 {
+        Color::Magenta
+    } else if score < 4096 {
+        Color::Cyan
+    } else {
+        Color::Red
+    }
 }

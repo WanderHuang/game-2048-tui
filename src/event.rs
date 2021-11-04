@@ -13,9 +13,14 @@ pub enum Event<I> {
 
 /// A small event handler that wrap termion input and tick events. Each event
 /// type is handled in its own thread and returned to a common `Receiver`
+/// 事件最小实现机制
+#[allow(dead_code)]
 pub struct Events {
+    /// 通信管道
     rx: mpsc::Receiver<Event<Key>>,
+    /// 键盘事件
     input_handle: thread::JoinHandle<()>,
+    /// 时间
     tick_handle: thread::JoinHandle<()>,
 }
 
@@ -33,12 +38,17 @@ impl Default for Config {
 }
 
 impl Events {
+    #[allow(dead_code)]
     pub fn new() -> Events {
         Events::with_config(Config::default())
     }
 
+    /// TUI系统配置
     pub fn with_config(config: Config) -> Events {
+        // 消息管道
         let (tx, rx) = mpsc::channel();
+
+        // 键盘事件
         let input_handle = {
             let tx = tx.clone();
             thread::spawn(move || {
@@ -53,6 +63,8 @@ impl Events {
                 }
             })
         };
+
+        // 任务事件
         let tick_handle = {
             thread::spawn(move || loop {
                 if let Err(err) = tx.send(Event::Tick) {
@@ -62,6 +74,7 @@ impl Events {
                 thread::sleep(config.tick_rate);
             })
         };
+
         Events {
             rx,
             input_handle,

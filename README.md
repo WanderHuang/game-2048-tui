@@ -24,6 +24,9 @@ If you love this repo, thank you for one star or leave an issue to contact me. L
 ## Furthermore
 
 Rust is a good language, hope me get more experienced on it.
+
+terminal is `termion`, `windows` is not supported **now**!
+
 ## LICENSE
 
 MIT

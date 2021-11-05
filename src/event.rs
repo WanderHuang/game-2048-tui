@@ -6,6 +6,7 @@ use std::time::Duration;
 use termion::event::Key;
 use termion::input::TermRead;
 
+/// common events
 pub enum Event<I> {
     Input(I),
     Tick,
@@ -13,14 +14,13 @@ pub enum Event<I> {
 
 /// A small event handler that wrap termion input and tick events. Each event
 /// type is handled in its own thread and returned to a common `Receiver`
-/// 事件最小实现机制
 #[allow(dead_code)]
 pub struct Events {
-    /// 通信管道
+    /// multi-producer-single-consumer
     rx: mpsc::Receiver<Event<Key>>,
-    /// 键盘事件
+    /// keyboard events
     input_handle: thread::JoinHandle<()>,
-    /// 时间
+    /// each tick
     tick_handle: thread::JoinHandle<()>,
 }
 
@@ -43,12 +43,14 @@ impl Events {
         Events::with_config(Config::default())
     }
 
-    /// TUI系统配置
+    /// config all your events for tui
+    /// 
+    /// keyboard events
+    /// tick events
     pub fn with_config(config: Config) -> Events {
-        // 消息管道
         let (tx, rx) = mpsc::channel();
 
-        // 键盘事件
+        // keyboard event
         let input_handle = {
             let tx = tx.clone();
             thread::spawn(move || {
@@ -64,7 +66,7 @@ impl Events {
             })
         };
 
-        // 任务事件
+        // tick
         let tick_handle = {
             thread::spawn(move || loop {
                 if let Err(err) = tx.send(Event::Tick) {

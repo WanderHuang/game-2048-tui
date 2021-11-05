@@ -1,15 +1,15 @@
 use rand::Rng;
 
-/// 游戏功能
+/// Game
 /// 
-/// 思路
+/// Rules:
 /// 
-/// 1. 一个面板，用于渲染数字，执行逻辑
-/// 2. 游戏存活状态
+/// 1. a board to render your game grid
+/// 2. can calculate/get your game status
 pub struct Game {
-    /// 是否存活
+    /// alive or dead
     pub alive: bool,
-    /// 面板
+    /// board
     panel: Panel,
 }
 
@@ -34,7 +34,7 @@ impl Game {
             .fold(0, |acc, x| acc + x.iter().fold(0, |row, y| row + y))
     }
 
-    /// 下一个时钟
+    /// calculate next tick grid
     pub fn next_tick(&mut self, cmd: Command) {
         self.panel.next_tick(cmd);
         self.alive = self.panel.check_alive();
@@ -44,36 +44,36 @@ impl Game {
         }
     }
 
-    /// 获取面板
+    /// get grid
     pub fn get_grid(&self) -> Grid {
         self.panel.get_grid()
     }
 }
 
-/// 游戏命令
+/// game command
 #[derive(PartialEq, Debug)]
 pub enum Command {
-    /// 向左
+    /// to left
     Left,
-    /// 向上
+    /// to top
     Up,
-    /// 向右
+    /// to right
     Right,
-    /// 向下
+    /// to bottom
     Down,
-    /// 无效命令
+    /// ignore command
     Nil,
 }
 
-/// 矩阵
+/// game grid
 pub type Grid = [[i32; 4]; 4];
 
-/// 游戏面板
+/// game grid panel
 /// 
-/// 思路
+/// Rules
 /// 
-/// 1. 有数字矩阵
-/// 2. 其他扩展功能
+/// 1. conain your grid
+/// 2. maybe other functions
 struct Panel {
     grid: [[i32; 4]; 4],
 }
@@ -83,20 +83,20 @@ impl Panel {
         Panel { grid: [[0; 4]; 4] }
     }
 
-    /// 初始化，插入两条数据
+    /// grid init
     pub fn init(&mut self) {
         self.random_insert();
         self.random_insert();
     }
 
-    /// 获取矩阵
+    /// get grid
     pub fn get_grid(&self) -> Grid {
         self.grid
     }
 
-    /// 随机插入一条数据
+    /// randomly insert one number into grid
     /// 
-    /// ｜TODO 插入数据应该按照当前最小值来定
+    /// ｜TODO maybe insert number should be determined by current numbers
     pub fn random_insert(&mut self) {
         let mut vec: Vec<(usize, usize)> = vec![];
         for (i, row) in self.grid.iter().enumerate() {
@@ -122,12 +122,12 @@ impl Panel {
         self.grid[i][j] = val;
     }
 
-    /// 检查是否存活
+    /// check if alive
     /// 
-    /// 思路
+    /// Rules
     /// 
-    /// 1. 有0存在，游戏继续
-    /// 2. 铺满格子后，有相邻的值相等，游戏继续
+    /// 1. if has zero, continue
+    /// 2. if grid is filled, to check whether adjacent boxes are the same value, if it's, then return alive
     pub fn check_alive(&self) -> bool {
 
         let has_zero = self.grid.iter().any(|row| row.iter().any(|x| *x == 0));
@@ -177,12 +177,12 @@ impl Panel {
         has_same
     }
 
-    /// 计算下一个格子
+    /// calculate next grid
     /// 
-    /// 思路
+    /// Rules
     /// 
-    /// 1. 根据移动方向，合并相邻且相等的值，并移动位置
-    /// 2. 循环计算，直到移动方向上没有相邻且相等的值
+    /// 1. calculate by Command
+    /// 2. recursion, merge each vector's same adjacent boxes
     pub fn next_tick(&mut self, cmd: Command) -> Grid {
         let mut grid = self.grid.clone();
 
@@ -292,7 +292,7 @@ impl Panel {
     }
 }
 
-/// 计算累计和 需要循环计算，两个挨着的数字如果值一样，则合并
+/// recursive calculate vector's adjacent boxes
 ///
 /// 1 2 2 4 -> 1 8
 fn sum(arr: Vec<i32>) -> Vec<i32> {

@@ -2,7 +2,7 @@ mod app;
 mod event;
 mod game;
 
-use std::{error::Error, fmt::Debug, io, time::Duration};
+use std::{error::Error, io, time::Duration};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
@@ -18,7 +18,6 @@ use tui::{
 use app::App;
 use event::{Config, Event, Events};
 use game::Command;
-use std::time::{SystemTime};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout().into_raw_mode()?;
@@ -41,21 +40,25 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
                 .split(f.size());
-            // 基本参数
+            // params
             let board_size = app.get_size();
             let panel_size = board_size + (board_size / 3.0);
             let half_box_size = app.box_size / 2.0;
             let font_width = 2.0;
-            // 游戏页面
+            // Game board
             let canvas = Canvas::default()
-                .block(Block::default().borders(Borders::ALL).title("2048"))
+                .block(Block::default().borders(Borders::ALL).title("2048-@wander"))
                 .paint(|ctx| {
                     let grid = app.get_grid();
                     for (row, list) in grid.iter().enumerate() {
                         for (col, _) in list.iter().enumerate() {
                             // 盒子参数
                             let score = grid[row][col];
-                            let s = pad_str(score.to_owned().to_string(), 6).into_boxed_str();
+                            let s = if score == 0 {
+                                String::from("").into_boxed_str()
+                            } else {
+                                pad_str(score.to_owned().to_string(), 6).into_boxed_str()
+                            };
                             let x_box = (col as f64) * app.box_size;
                             let y_box = (row as f64) * app.box_size;
                             ctx.print(
@@ -107,14 +110,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                         ctx.print(
                             app.box_size * 1.5,
                             app.box_size * 2.0,
-                            "---- GAME OVER! ----",
+                            " GAME OVER! ",
                             Color::Blue,
                         );
 
                         ctx.print(
                             app.box_size * 1.3,
                             app.box_size * 1.8,
-                            ">>>> Restart[R] Quit[Q] <<<<",
+                            " Restart[R] Quit[Q] ",
                             Color::Blue,
                         );
                     }
@@ -122,19 +125,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .x_bounds([0.0, board_size])
                 .y_bounds([0.0, board_size]);
             f.render_widget(canvas, chunks[0]);
-            // 统计页面
+            // Informantions
             let canvas = Canvas::default()
                 .block(Block::default().borders(Borders::ALL).title("Panel"))
                 .paint(|ctx| {
-                    ctx.print(board_size, board_size, "Relax in 2048", Color::Blue);
+                    ctx.print(board_size, board_size, "> Relax <", Color::Blue);
 
                     let score = app.get_score().to_owned().to_string().into_boxed_str();
-                    ctx.print(board_size, board_size - 5.0, "Score:", Color::Yellow);
+                    ctx.print(board_size, board_size - 30.0, "Score:", Color::Green);
                     ctx.print(
                         board_size,
-                        board_size - 10.0,
+                        board_size - 40.0,
                         Box::leak(score),
-                        Color::Yellow,
+                        Color::Green,
                     );
 
                     ctx.print(board_size, 0.0, "Quit[Q]", Color::Blue);
@@ -143,6 +146,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .y_bounds([0.0, board_size]);
             f.render_widget(canvas, chunks[1]);
         })?;
+
+        // Events
         match events.next()? {
             Event::Input(input) => match input {
                 Key::Char('q') => {
@@ -190,6 +195,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// make different strings as same length
 fn pad_str(s: String, length: usize) -> String {
     let mut s = s.clone();
     loop {
@@ -203,13 +209,16 @@ fn pad_str(s: String, length: usize) -> String {
     s
 }
 
+/// render different color for different score
 fn score_to_color(score: i32) -> Color {
     if score < 64 {
-        Color::Yellow
-    } else if score < 1024 {
+        Color::Green
+    } else if score < 256 {
         Color::Magenta
-    } else if score < 4096 {
+    } else if score < 1024 {
         Color::Cyan
+    } else if score < 4096 {
+        Color::LightRed
     } else {
         Color::Red
     }

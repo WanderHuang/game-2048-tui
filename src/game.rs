@@ -1,5 +1,7 @@
 use rand::Rng;
 
+use crate::utils::equal_slice;
+
 /// Game
 /// 
 /// Rules:
@@ -36,10 +38,10 @@ impl Game {
 
     /// calculate next tick grid
     pub fn next_tick(&mut self, cmd: Command) {
-        self.panel.next_tick(cmd);
+        let grid_changed = self.panel.next_tick(cmd);
         self.alive = self.panel.check_alive();
 
-        if self.alive {
+        if self.alive && grid_changed {
             self.panel.random_insert();
         }
     }
@@ -183,7 +185,9 @@ impl Panel {
     /// 
     /// 1. calculate by Command
     /// 2. recursion, merge each vector's same adjacent boxes
-    pub fn next_tick(&mut self, cmd: Command) -> Grid {
+    /// 
+    /// returns: true means value changes, false means no change
+    pub fn next_tick(&mut self, cmd: Command) -> bool {
         let mut grid = self.grid.clone();
 
         match cmd {
@@ -286,9 +290,14 @@ impl Panel {
             _ => {}
         }
 
-        self.grid = grid;
+        // Fix:
+        // https://github.com/WanderHuang/game-2048-tui/issues/1
+        let is_changed = !is_equal_grid(&self.grid, &grid);
+        if is_changed {
+            self.grid = grid;
+        }
 
-        self.grid
+        is_changed
     }
 }
 
@@ -317,4 +326,17 @@ fn sum(arr: Vec<i32>) -> Vec<i32> {
     }
 
     res
+}
+
+
+/// check if two grid is equal
+fn is_equal_grid<T>(a: &[[T; 4]; 4], b: &[[T; 4]; 4]) -> bool where T: Eq {
+    for (i, a_row) in a.iter().enumerate() {
+        let eq = equal_slice(a_row, &b[i]);
+        if !eq {
+            return false
+        }
+    }
+
+    true
 }

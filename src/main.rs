@@ -1,6 +1,7 @@
 mod app;
 mod event;
 mod game;
+mod utils;
 
 use std::{error::Error, io, time::Duration};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};

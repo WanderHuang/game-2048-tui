@@ -27,6 +27,16 @@ Rust is a good language, hope me get more experienced on it.
 
 terminal is `termion`, `windows` is not supported **now**!
 
+## Roadmap
+
+It seems that many people like this game, I am going to develop more features.
+
+- [x] basic game function
+- [x] score collection
+- [ ] more game informations to show
+- [ ] LAN Battle
+- [ ] cache & restore
+
 ## LICENSE
 
 MIT
